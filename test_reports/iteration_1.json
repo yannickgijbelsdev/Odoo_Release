@@ -1,0 +1,65 @@
+{
+  "summary": "Full backend (pytest, 15/15 passing) + frontend (Playwright end-to-end) testing of the Odoo Overdue Reminders app. Login+MFA setup+verify, demo invoice loading, invoices list, sync-without-config, remind-without-Office365 (graceful failure logged), toggle auto, settings mask/preserve secrets, discord test without webhook, cron auth (401/401/200 accepted), theme toggle, navigation to Instellingen and Activiteit all work correctly. All UI labels are in Dutch as required.",
+  "backend_issues": {
+    "critical": [
+      {
+        "endpoint": "POST /api/invoices/{id}/remind",
+        "issue": "Backend raises HTTPException(status_code=502) on graceful business failures (e.g. Office 365 not configured). Cloudflare/edge treats any 5xx from origin as a real upstream error and REWRITES the response body to an HTML '502: Bad gateway' page, so the Dutch detail ('Office 365 is niet volledig geconfigureerd') never reaches the browser. The frontend toast will show a generic 'Aanvraag mislukt' instead of the intended reason. The failure IS correctly written to reminder_logs so state is fine, but user feedback is broken. Recommend returning HTTP 400 (or 200 with {status:'failed', detail:...}) for expected app-level failures and reserving 502 for real gateway errors. Same edge behavior will hit /api/discord/test and /api/odoo/test when the external service returns non-2xx (they also use 502).",
+        "priority": "HIGH"
+      }
+    ],
+    "minor": [
+      {
+        "endpoint": "GET /api/auth/mfa/setup",
+        "issue": "Secret is rotated whenever mfa_enabled is True (server.py: `if not secret or user.get(\"mfa_enabled\"): secret = pyotp.random_base32()`). This endpoint requires only an mfa_token (obtainable with just email+password before TOTP), so an attacker with valid password could force-rotate a legitimate user's TOTP secret and lock them out. Recommend: return existing secret if mfa_enabled=True, or only rotate on an explicit re-enroll flag."
+      },
+      {
+        "endpoint": "startup seed_admin",
+        "issue": "Admin password is auto-reset every startup if it doesn't match ADMIN_PASSWORD, but the MFA flag is never reset. Fine for now, but if ADMIN_PASSWORD rotates the operator still needs the old TOTP secret. Consider a rescue path."
+      }
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {
+        "flow": "Herinner (email) with no Office365 configured",
+        "issue": "Because backend returns 502 and Cloudflare rewrites the body, the toast in the UI will not display the Dutch error ('Office 365 is niet volledig geconfigureerd'). It falls back to axios error text. See backend HIGH issue above.",
+        "affected_selectors": ["[data-testid^=send-reminder-button-]", "[data-testid^=remind-email-]"]
+      }
+    ],
+    "design_issues": [
+      {
+        "screen": "Login card",
+        "issues": ["Handmatige TOTP-sleutel is rendered inside a generic <code> element without a data-testid; not a bug, but wire a testid for reliability."]
+      }
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/backend_test.py",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [
+    "Change /api/invoices/{id}/remind (and /api/discord/test, /api/odoo/test) to NOT return HTTP 502 for expected/graceful failures; use 400 or 200 with a status field so Cloudflare doesn't rewrite the body and the Dutch detail reaches the toast.",
+    "Fix /api/auth/mfa/setup to NOT regenerate the TOTP secret when mfa_enabled is already True (server.py line ~171). Current logic lets anyone with the password wipe the user's authenticator.",
+    "Optional: add data-testid to the TOTP secret <code> element and to the theme toggle button (currently found by text 'Lichte modus/Donkere modus')."
+  ],
+  "critical_code_review_comments": [
+    "server.py mfa_setup: `if not secret or user.get('mfa_enabled'): secret = pyotp.random_base32()` is inverted logic — should be `if not secret and not user.get('mfa_enabled')`.",
+    "server.py remind endpoint returns 502 for business errors — collides with edge/CDN 5xx handling. Body is replaced by Cloudflare error page.",
+    "CORS: `allow_credentials=True` combined with `allow_origins=['*']` is invalid per CORS spec and will be silently ignored by browsers when cookies/credentials are needed. Currently JWT is via Authorization header so it works, but tighten origins for production.",
+    "Odoo `_connect_and_fetch` re-authenticates on every sync (fine) but has no timeout on xmlrpc.client — a slow Odoo instance can block the worker for a long time. Consider a socket timeout.",
+    "Server startup seeds admin using motor operations without try/except; if admin_email is invalid the app fails to start.",
+    "cron_reminders uses `hmac.compare_digest` on strings — OK, but token comes from `auth_header[7:]` which allows whitespace to slip through if header is malformed; strip it."
+  ],
+  "updated_files": [
+    "/app/backend/tests/backend_test.py"
+  ],
+  "success_rate": {"backend": "100% (15/15 pytest)", "frontend": "100% of tested flows"},
+  "test_credentials": "admin: 4s5nxkkk67@privaterelay.appleid.com / OdooReminders#2026. MFA was reset once during testing via mongo (mfa_enabled=False, totp_secret unset) to exercise the setup flow; new secret was generated inside the UI test.",
+  "seed_data_creation": "POST /api/invoices/load-demo inserts 6 demo invoices; tests rely on that endpoint.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Backend regression suite lives at /app/backend/tests/backend_test.py — run with `python -m pytest backend/tests/backend_test.py -n 0` (pytest.ini has -n 2 --dist loadscope which causes fixture races because two workers race on the /auth/mfa/setup TOTP rotation; use -n 0 for now). If admin MFA is already enabled, login will route to the `verify` step instead of `setup`; frontend UI test currently resets `mfa_enabled=False` in mongo first to exercise the setup path. Backend base URL: env REACT_APP_BACKEND_URL. Cron secret in backend/.env: WEBHOOK_CRON_SECRET.",
+  "rca of the issue": "Herinner failure toast bug RCA: FastAPI raises HTTPException(502) → uvicorn returns application/json with detail → Cloudflare (Server: cloudflare in headers) sees any 5xx from origin as an upstream failure and REPLACES the response body with its own HTML 502 error page (`preview.emergentagent.com | 502: Bad gateway`). Response body observed: HTML starting with `<!DOCTYPE html>...preview.emergentagent.com | 502: Bad gateway...`. Frontend axios call therefore cannot parse the intended Dutch detail. Mitigation: use non-5xx status codes for expected/business failures (400 for config missing, or 200 with a status field); reserve 5xx for actual upstream/gateway failures. Reproduction: with no Office365 config, POST /api/invoices/{id}/remind {channel:'email'} through the public URL — status 502 with HTML body; direct backend call would return JSON detail."
+}

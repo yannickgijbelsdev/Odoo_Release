@@ -168,9 +168,11 @@ async def mfa_setup(request: Request):
         raise HTTPException(status_code=404, detail="Gebruiker niet gevonden")
     import pyotp
     secret = user.get("totp_secret")
-    if not secret or user.get("mfa_enabled"):
+    if not secret and not user.get("mfa_enabled"):
         secret = pyotp.random_base32()
         await db.users.update_one({"_id": ObjectId(user_id)}, {"$set": {"totp_secret": secret}})
+    if not secret:
+        raise HTTPException(status_code=400, detail="MFA is al geactiveerd voor deze gebruiker")
     uri = auth_lib.totp_provisioning_uri(secret, user["email"])
     return {"secret": secret, "qr_code": auth_lib.make_qr_data_url(uri), "otpauth_uri": uri}
 
@@ -222,7 +224,7 @@ async def sync_invoices(current=Depends(get_current_user)):
     try:
         records = await odoo_client.fetch_overdue_invoices(o["url"], o["db"], o["username"], o["api_key"])
     except Exception as e:
-        raise HTTPException(status_code=502, detail=f"Odoo synchronisatie mislukt: {str(e)}")
+        raise HTTPException(status_code=400, detail=f"Odoo synchronisatie mislukt: {str(e)}")
 
     # preserve per-invoice auto settings
     existing = {i["odoo_id"]: i for i in await db.invoices.find({"source": "odoo"}).to_list(1000)}
@@ -373,7 +375,7 @@ async def remind(invoice_id: str, data: RemindInput, current=Depends(get_current
     settings = await get_settings()
     entry = await dispatch_reminder(_serialize_invoice(invoice), data.channel, settings, trigger="handmatig")
     if entry["status"] == "failed":
-        raise HTTPException(status_code=502, detail=entry["detail"] or "Verzenden mislukt")
+        raise HTTPException(status_code=400, detail=entry["detail"] or "Verzenden mislukt")
     return entry
 
 
@@ -386,7 +388,7 @@ async def discord_test(current=Depends(get_current_user)):
     try:
         await notif.send_discord(webhook, title="🔔 Testmelding", description="Verbinding met kanaal #odoo werkt correct.")
     except Exception as e:
-        raise HTTPException(status_code=502, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e))
     return {"ok": True}
 
 
@@ -399,7 +401,7 @@ async def odoo_test(current=Depends(get_current_user)):
     try:
         info = await odoo_client.test_connection(o["url"], o["db"], o["username"], o["api_key"])
     except Exception as e:
-        raise HTTPException(status_code=502, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e))
     return {"ok": True, **info}
 
 
@@ -471,7 +473,7 @@ async def cron_reminders(request: Request, background_tasks: BackgroundTasks):
     # Cron endpoints must ack 2xx immediately; enqueue/background the actual work.
     secret = os.environ.get("WEBHOOK_CRON_SECRET", "")
     auth_header = request.headers.get("Authorization", "")
-    token = auth_header[7:] if auth_header.startswith("Bearer ") else ""
+    token = auth_header[7:].strip() if auth_header.startswith("Bearer ") else ""
     if not secret or not hmac.compare_digest(token, secret):
         raise HTTPException(status_code=401, detail="Unauthorized")
     try:
