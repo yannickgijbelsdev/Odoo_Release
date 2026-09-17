@@ -1,0 +1,122 @@
+{
+  "project_title": "Odoo Overdue Invoice & Automated Reminders Platform",
+  "app_type": "saas_app (internal finance/accounts-receivable dashboard tool)",
+  "language_context": "Dutch (Nederlands) primary UI labels, English/Dutch bilingual support",
+  "archetype": "SWISS FINTECH PRECISION & PERFORMANCE PRO",
+  "theme_strategy": {
+    "default_mode": "dark",
+    "toggle_supported": true,
+    "description": "High-density tactical dark theme optimized for long financial sessions, with crisp light-mode option. Zero glare, high contrast data legibility."
+  },
+  "typography": {
+    "heading_font": "Plus Jakarta Sans, sans-serif",
+    "body_font": "IBM Plex Sans, sans-serif",
+    "mono_font": "JetBrains Mono, monospace",
+    "anti_default_rule": "Strictly NO Inter for main section headings or metric callouts. Use Plus Jakarta Sans (bold/extra-bold, tracking-tight) for headings and JetBrains Mono for invoice numbers, amounts, dates, and days overdue.",
+    "hierarchy": {
+      "h1_hero": "text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight",
+      "h2_section": "text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight",
+      "h3_card": "text-lg sm:text-xl font-semibold tracking-normal",
+      "h4_widget": "text-base font-medium",
+      "body": "text-sm sm:text-base leading-relaxed",
+      "caption_label": "text-xs uppercase tracking-widest font-mono font-medium text-slate-400"
+    }
+  },
+  "colors": {
+    "dark_mode": {
+      "bg_primary": "#0B0F17",
+      "bg_surface": "#131C2E",
+      "bg_surface_elevated": "#1E293B",
+      "border": "#2E3D59",
+      "border_focus": "#6366F1",
+      "text_primary": "#F8FAFC",
+      "text_secondary": "#94A3B8",
+      "text_muted": "#64748B"
+    },
+    "light_mode": {
+      "bg_primary": "#F8FAFC",
+      "bg_surface": "#FFFFFF",
+      "bg_surface_elevated": "#F1F5F9",
+      "border": "#E2E8F0",
+      "border_focus": "#4F46E5",
+      "text_primary": "#0F172A",
+      "text_secondary": "#475569",
+      "text_muted": "#94A3B8"
+    },
+    "brand_accents": {
+      "primary": "#6366F1",
+      "primary_hover": "#4F46E5",
+      "odoo_purple": "#714B67",
+      "discord_blurple": "#5865F2",
+      "whatsapp_green": "#25D366",
+      "office_blue": "#0078D4",
+      "overdue_critical": "#EF4444",
+      "overdue_warning": "#F59E0B",
+      "status_success": "#10B981"
+    }
+  },
+  "layout_and_spacing": {
+    "grid_mode": "MODE B: High Density Dashboard Grid",
+    "base_padding": "p-4 md:p-6 lg:p-8",
+    "container_max_width": "max-w-7xl mx-auto",
+    "card_padding": "p-5 md:p-6",
+    "border_radius": "rounded-xl for cards, rounded-lg for buttons/inputs, rounded-full for status badges",
+    "gap_scale": "gap-4 md:gap-6"
+  },
+  "key_features_and_components": {
+    "login_and_mfa": {
+      "description": "Secure login with email/password followed by TOTP MFA QR enrollment and 6-digit verification code step.",
+      "components": ["Card", "Input", "Button", "Dialog", "Badge", "QRCode Display"]
+    },
+    "odoo_invoice_table": {
+      "description": "Interactive data grid showing overdue invoices fetched from Odoo API with columns for Customer, Invoice #, Amount (€), Due Date, Days Overdue, Active Schedule, and Quick Send Action.",
+      "features": ["Sorting", "Filtering by severity", "Bulk selection for batch reminder sending", "Channel status indicators"]
+    },
+    "reminder_action_modal": {
+      "description": "Send immediate manual or test reminders via Office 365 Email or WhatsApp Twilio, with automatic notification dispatch to Discord #odoo.",
+      "channel_selectors": ["Office 365 Email", "WhatsApp (Twilio)", "Discord #odoo Webhook"]
+    },
+    "schedule_settings_drawer": {
+      "description": "Automated schedule rules (e.g., Send 1st reminder at +3 days overdue, 2nd at +7 days, escalate to WhatsApp at +14 days).",
+      "time_triggers": "Customizable cron / frequency time slots"
+    },
+    "reminder_activity_log": {
+      "description": "Historical timeline audit log of sent reminders with delivery status, timestamp, target email/phone, and Discord notification status."
+    },
+    "settings_page": {
+      "description": "Connection test panel for Odoo API URL/Database/API Key, Discord Webhook URL & #odoo channel name, Office 365 OAuth credentials, and WhatsApp API configuration."
+    }
+  },
+  "image_urls": {
+    "workspace_hero": "https://images.unsplash.com/photo-1783538771515-78a987fcdbbf?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjY2NzF8MHwxfHNlYXJjaHwzfHxmaW5hbmNlJTIwZGFzaGJvYXJkJTIwcHJvZmVzc2lvbmFsJTIwd29ya3NwYWNlJTIwaW52b2ljZXxlbnwwfHx8fDE3ODk2ODczODd8MA&ixlib=rb-4.1.0&q=85",
+    "invoice_management": "https://images.pexels.com/photos/8872719/pexels-photo-8872719.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+    "financial_analytics": "https://images.unsplash.com/photo-1763568258367-1c52beb60be7?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjY2NzF8MHwxfHNlYXJjaHwyfHxmaW5hbmNlJTIwZGFzaGJvYXJkJTIwcHJvZmVzc2lvbmFsJTIwd29ya3NwYWNlJTIwaW52b2ljZXxlbnwwfHx8fDE3ODk2ODczODd8MA&ixlib=rb-4.1.0&q=85"
+  },
+  "testing_requirements": {
+    "rule": "ALL interactive components, form fields, action buttons, table rows, badges, and modals MUST include a clear kebab-case data-testid attribute.",
+    "examples": {
+      "login_email": "login-email-input",
+      "login_password": "login-password-input",
+      "login_submit": "login-submit-button",
+      "mfa_token_input": "mfa-token-input",
+      "mfa_verify_button": "mfa-verify-button",
+      "invoice_row": "invoice-row-{invoice_id}",
+      "send_reminder_button": "send-reminder-button-{invoice_id}",
+      "channel_whatsapp_toggle": "channel-whatsapp-toggle",
+      "channel_office_toggle": "channel-office-toggle",
+      "schedule_save_button": "schedule-save-button",
+      "settings_odoo_url": "settings-odoo-url-input",
+      "settings_discord_webhook": "settings-discord-webhook-input",
+      "settings_save_button": "settings-save-button",
+      "sync_odoo_button": "sync-odoo-button",
+      "filter_overdue_select": "filter-overdue-select"
+    }
+  },
+  "instructions_to_main_agent": [
+    "Ensure all components are built using React .js files.",
+    "Maintain high UI/UX visual standard with dark glassmorphism surfaces, vibrant status badges (Discord purple #5865F2, WhatsApp green #25D366, Office blue #0078D4, Odoo magenta #714B67).",
+    "Ensure Dutch business terms are used naturally alongside standard English UI options (e.g. 'Vervallen Facturen', 'Herinnering Sturen', 'Tijdsschema', 'Odoo Koppeling').",
+    "Add toast notifications via sonner for actions like sending reminders, updating settings, or testing Discord webhooks.",
+    "Implement data-testid attributes strictly as defined."
+  ]
+}
