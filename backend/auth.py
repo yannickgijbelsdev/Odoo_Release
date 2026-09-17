@@ -55,7 +55,7 @@ def _bearer(request: Request) -> str:
     auth_header = request.headers.get("Authorization", "")
     if auth_header.startswith("Bearer "):
         return auth_header[7:]
-    raise HTTPException(status_code=401, detail="Niet geauthenticeerd")
+    raise HTTPException(status_code=401, detail="Not authenticated")
 
 
 def get_mfa_user_id(request: Request) -> str:
@@ -63,11 +63,11 @@ def get_mfa_user_id(request: Request) -> str:
     try:
         payload = decode_token(token)
     except jwt.ExpiredSignatureError:
-        raise HTTPException(status_code=401, detail="MFA-sessie verlopen, log opnieuw in")
+        raise HTTPException(status_code=401, detail="MFA session expired, please sign in again")
     except jwt.InvalidTokenError:
-        raise HTTPException(status_code=401, detail="Ongeldig token")
+        raise HTTPException(status_code=401, detail="Invalid token")
     if payload.get("type") != "mfa":
-        raise HTTPException(status_code=401, detail="Ongeldig tokentype")
+        raise HTTPException(status_code=401, detail="Invalid token type")
     return payload["sub"]
 
 
@@ -93,14 +93,14 @@ def get_current_user_factory(db):
         try:
             payload = decode_token(token)
         except jwt.ExpiredSignatureError:
-            raise HTTPException(status_code=401, detail="Token verlopen")
+            raise HTTPException(status_code=401, detail="Token expired")
         except jwt.InvalidTokenError:
-            raise HTTPException(status_code=401, detail="Ongeldig token")
+            raise HTTPException(status_code=401, detail="Invalid token")
         if payload.get("type") != "access":
-            raise HTTPException(status_code=401, detail="Ongeldig tokentype")
+            raise HTTPException(status_code=401, detail="Invalid token type")
         user = await db.users.find_one({"_id": ObjectId(payload["sub"])})
         if not user:
-            raise HTTPException(status_code=401, detail="Gebruiker niet gevonden")
+            raise HTTPException(status_code=401, detail="User not found")
         user["id"] = str(user["_id"])
         user.pop("_id", None)
         user.pop("password_hash", None)

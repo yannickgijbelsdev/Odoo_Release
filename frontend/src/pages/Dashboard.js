@@ -11,14 +11,14 @@ import {
 import { toast } from "sonner";
 
 function severity(days) {
-  if (days >= 30) return { label: "Kritiek", cls: "bg-red-500/15 text-red-400 border-red-500/30" };
-  if (days >= 14) return { label: "Ernstig", cls: "bg-orange-500/15 text-orange-400 border-orange-500/30" };
-  if (days >= 7) return { label: "Waarschuwing", cls: "bg-amber-500/15 text-amber-400 border-amber-500/30" };
+  if (days >= 30) return { label: "Critical", cls: "bg-red-500/15 text-red-400 border-red-500/30" };
+  if (days >= 14) return { label: "Severe", cls: "bg-orange-500/15 text-orange-400 border-orange-500/30" };
+  if (days >= 7) return { label: "Warning", cls: "bg-amber-500/15 text-amber-400 border-amber-500/30" };
   return { label: "Recent", cls: "bg-slate-500/15 text-slate-400 border-slate-500/30" };
 }
 
 function euro(n, cur = "EUR") {
-  return new Intl.NumberFormat("nl-NL", { style: "currency", currency: cur }).format(n || 0);
+  return new Intl.NumberFormat("en-GB", { style: "currency", currency: cur }).format(n || 0);
 }
 
 const Stat = ({ icon: Icon, label, value, accent }) => (
@@ -55,7 +55,7 @@ export default function Dashboard() {
     setBusy("sync");
     try {
       const res = await api.post("/invoices/sync");
-      toast.success(`${res.data.synced} facturen gesynchroniseerd vanuit Odoo`);
+      toast.success(`${res.data.synced} invoices synced from Odoo`);
       load();
     } catch (err) {
       toast.error(apiError(err.response?.data?.detail));
@@ -66,7 +66,7 @@ export default function Dashboard() {
     setBusy("demo");
     try {
       const res = await api.post("/invoices/load-demo");
-      toast.success(`${res.data.loaded} demo-facturen geladen`);
+      toast.success(`${res.data.loaded} demo invoices loaded`);
       load();
     } catch (err) {
       toast.error(apiError(err.response?.data?.detail));
@@ -77,7 +77,7 @@ export default function Dashboard() {
     setBusy(`remind-${inv.id}`);
     try {
       await api.post(`/invoices/${inv.id}/remind`, { channel });
-      toast.success(`Herinnering verzonden via ${channel === "email" ? "e-mail" : "WhatsApp"} + melding naar #odoo`);
+      toast.success(`Reminder sent via ${channel === "email" ? "email" : "WhatsApp"} + #odoo notification`);
       load();
     } catch (err) {
       toast.error(apiError(err.response?.data?.detail));
@@ -97,23 +97,23 @@ export default function Dashboard() {
     <div className="p-4 md:p-6 lg:p-8 max-w-7xl mx-auto">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-2xl lg:text-3xl font-extrabold tracking-tight">Vervallen Facturen</h1>
-          <p className="text-sm text-muted-foreground">Openstaande debiteuren uit Odoo met automatische herinneringen</p>
+          <h1 className="text-2xl lg:text-3xl font-extrabold tracking-tight">Overdue Invoices</h1>
+          <p className="text-sm text-muted-foreground">Outstanding receivables from Odoo with automated reminders</p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={loadDemo} disabled={busy === "demo"} data-testid="load-demo-button">
             {busy === "demo" ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileWarning className="h-4 w-4 mr-2" />} Demo data
           </Button>
           <Button onClick={sync} disabled={busy === "sync"} data-testid="sync-odoo-button">
-            {busy === "sync" ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <RefreshCw className="h-4 w-4 mr-2" />} Odoo synchroniseren
+            {busy === "sync" ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <RefreshCw className="h-4 w-4 mr-2" />} Sync Odoo
           </Button>
         </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-6 mb-6">
-        <Stat icon={FileWarning} label="Vervallen facturen" value={data.count} accent="bg-red-500/15 text-red-400" />
-        <Stat icon={Euro} label="Openstaand bedrag" value={euro(data.total_outstanding)} accent="bg-primary/15 text-primary" />
-        <Stat icon={Database} label="Bron" value={data.invoices[0]?.source === "odoo" ? "Odoo" : data.invoices.length ? "Demo" : "—"} accent="bg-emerald-500/15 text-emerald-400" />
+        <Stat icon={FileWarning} label="Overdue invoices" value={data.count} accent="bg-red-500/15 text-red-400" />
+        <Stat icon={Euro} label="Outstanding amount" value={euro(data.total_outstanding)} accent="bg-primary/15 text-primary" />
+        <Stat icon={Database} label="Source" value={data.invoices[0]?.source === "odoo" ? "Odoo" : data.invoices.length ? "Demo" : "—"} accent="bg-emerald-500/15 text-emerald-400" />
       </div>
 
       <div className="glass border border-border rounded-xl overflow-hidden">
@@ -122,21 +122,21 @@ export default function Dashboard() {
         ) : data.invoices.length === 0 ? (
           <div className="p-12 text-center" data-testid="empty-state">
             <AlertTriangle className="h-10 w-10 mx-auto text-muted-foreground mb-3" />
-            <p className="font-semibold">Geen vervallen facturen</p>
-            <p className="text-sm text-muted-foreground mt-1">Synchroniseer met Odoo of laad demo-data om te starten.</p>
+            <p className="font-semibold">No overdue invoices</p>
+            <p className="text-sm text-muted-foreground mt-1">Sync with Odoo or load demo data to get started.</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left text-xs uppercase tracking-widest text-muted-foreground font-mono border-b border-border">
-                  <th className="px-4 py-3">Klant</th>
-                  <th className="px-4 py-3">Factuur</th>
-                  <th className="px-4 py-3 text-right">Bedrag</th>
-                  <th className="px-4 py-3">Vervaldatum</th>
-                  <th className="px-4 py-3 text-center">Dagen</th>
+                  <th className="px-4 py-3">Customer</th>
+                  <th className="px-4 py-3">Invoice</th>
+                  <th className="px-4 py-3 text-right">Amount</th>
+                  <th className="px-4 py-3">Due date</th>
+                  <th className="px-4 py-3 text-center">Days</th>
                   <th className="px-4 py-3 text-center">Auto</th>
-                  <th className="px-4 py-3 text-right">Actie</th>
+                  <th className="px-4 py-3 text-right">Action</th>
                 </tr>
               </thead>
               <tbody>
@@ -149,7 +149,7 @@ export default function Dashboard() {
                       data-testid={`invoice-row-${inv.id}`}>
                       <td className="px-4 py-3">
                         <p className="font-medium">{inv.partner_name}</p>
-                        <p className="text-xs text-muted-foreground">{inv.email || inv.phone || "geen contact"}</p>
+                        <p className="text-xs text-muted-foreground">{inv.email || inv.phone || "no contact"}</p>
                       </td>
                       <td className="px-4 py-3 font-mono text-xs">{inv.name}</td>
                       <td className="px-4 py-3 text-right font-mono font-semibold">{euro(inv.amount_residual, inv.currency)}</td>
@@ -165,12 +165,12 @@ export default function Dashboard() {
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button size="sm" disabled={busy === `remind-${inv.id}`} data-testid={`send-reminder-button-${inv.id}`}>
-                              {busy === `remind-${inv.id}` ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Send className="h-4 w-4 mr-1.5" /> Herinner</>}
+                              {busy === `remind-${inv.id}` ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Send className="h-4 w-4 mr-1.5" /> Remind</>}
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem onClick={() => sendReminder(inv, "email")} data-testid={`remind-email-${inv.id}`}>
-                              <Mail className="h-4 w-4 mr-2 text-[#0078D4]" /> Via Office 365 e-mail
+                              <Mail className="h-4 w-4 mr-2 text-[#0078D4]" /> Via Office 365 email
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => sendReminder(inv, "whatsapp")} data-testid={`remind-whatsapp-${inv.id}`}>
                               <MessageCircle className="h-4 w-4 mr-2 text-[#25D366]" /> Via WhatsApp

@@ -25,8 +25,8 @@ function App() {
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Protected><Dashboard /></Protected>} />
-            <Route path="/instellingen" element={<Protected><Settings /></Protected>} />
-            <Route path="/activiteit" element={<Protected><Activity /></Protected>} />
+            <Route path="/settings" element={<Protected><Settings /></Protected>} />
+            <Route path="/activity" element={<Protected><Activity /></Protected>} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </BrowserRouter>

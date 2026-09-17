@@ -88,7 +88,7 @@ class SettingsInput(BaseModel):
     twilio: TwilioConfig = TwilioConfig()
     schedule_steps: List[ScheduleStep] = []
     auto_reminders_enabled: bool = True
-    company_name: str = "Mijn Bedrijf"
+    company_name: str = "My Company"
 
 
 class RemindInput(BaseModel):
@@ -97,9 +97,9 @@ class RemindInput(BaseModel):
 
 # ---------------- Settings helpers ----------------
 DEFAULT_STEPS = [
-    {"id": str(uuid.uuid4()), "day_offset": 3, "channel": "email", "label": "1e herinnering"},
-    {"id": str(uuid.uuid4()), "day_offset": 7, "channel": "email", "label": "2e herinnering"},
-    {"id": str(uuid.uuid4()), "day_offset": 14, "channel": "whatsapp", "label": "Laatste aanmaning"},
+    {"id": str(uuid.uuid4()), "day_offset": 3, "channel": "email", "label": "1st reminder"},
+    {"id": str(uuid.uuid4()), "day_offset": 7, "channel": "email", "label": "2nd reminder"},
+    {"id": str(uuid.uuid4()), "day_offset": 14, "channel": "whatsapp", "label": "Final notice"},
 ]
 
 
@@ -114,7 +114,7 @@ async def get_settings() -> dict:
             "twilio": TwilioConfig().model_dump(),
             "schedule_steps": DEFAULT_STEPS,
             "auto_reminders_enabled": True,
-            "company_name": "Mijn Bedrijf",
+            "company_name": "My Company",
         }
         await db.settings.insert_one(s)
     s.pop("_id", None)
@@ -151,7 +151,7 @@ async def login(data: LoginInput):
     email = data.email.lower()
     user = await db.users.find_one({"email": email})
     if not user or not auth_lib.verify_password(data.password, user.get("password_hash", "")):
-        raise HTTPException(status_code=401, detail="Ongeldige e-mail of wachtwoord")
+        raise HTTPException(status_code=401, detail="Invalid email or password")
     mfa_token = auth_lib.create_mfa_token(str(user["_id"]))
     return {
         "mfa_token": mfa_token,
@@ -165,14 +165,14 @@ async def mfa_setup(request: Request):
     from bson import ObjectId
     user = await db.users.find_one({"_id": ObjectId(user_id)})
     if not user:
-        raise HTTPException(status_code=404, detail="Gebruiker niet gevonden")
+        raise HTTPException(status_code=404, detail="User not found")
     import pyotp
     secret = user.get("totp_secret")
     if not secret and not user.get("mfa_enabled"):
         secret = pyotp.random_base32()
         await db.users.update_one({"_id": ObjectId(user_id)}, {"$set": {"totp_secret": secret}})
     if not secret:
-        raise HTTPException(status_code=400, detail="MFA is al geactiveerd voor deze gebruiker")
+        raise HTTPException(status_code=400, detail="MFA is already enabled for this user")
     uri = auth_lib.totp_provisioning_uri(secret, user["email"])
     return {"secret": secret, "qr_code": auth_lib.make_qr_data_url(uri), "otpauth_uri": uri}
 
@@ -183,9 +183,9 @@ async def mfa_verify(data: MfaVerifyInput, request: Request):
     from bson import ObjectId
     user = await db.users.find_one({"_id": ObjectId(user_id)})
     if not user or not user.get("totp_secret"):
-        raise HTTPException(status_code=400, detail="MFA is niet ingesteld")
+        raise HTTPException(status_code=400, detail="MFA is not set up")
     if not auth_lib.verify_totp(user["totp_secret"], data.code.strip()):
-        raise HTTPException(status_code=401, detail="Ongeldige verificatiecode")
+        raise HTTPException(status_code=401, detail="Invalid verification code")
     if not user.get("mfa_enabled"):
         await db.users.update_one({"_id": ObjectId(user_id)}, {"$set": {"mfa_enabled": True}})
     token = auth_lib.create_access_token(user_id, user["email"])
@@ -220,11 +220,11 @@ async def sync_invoices(current=Depends(get_current_user)):
     s = await get_settings()
     o = s.get("odoo", {})
     if not (o.get("url") and o.get("db") and o.get("username") and o.get("api_key")):
-        raise HTTPException(status_code=400, detail="Configureer eerst de Odoo-koppeling bij Instellingen")
+        raise HTTPException(status_code=400, detail="Configure the Odoo connection in Settings first")
     try:
         records = await odoo_client.fetch_overdue_invoices(o["url"], o["db"], o["username"], o["api_key"])
     except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Odoo synchronisatie mislukt: {str(e)}")
+        raise HTTPException(status_code=400, detail=f"Odoo sync failed: {str(e)}")
 
     # preserve per-invoice auto settings
     existing = {i["odoo_id"]: i for i in await db.invoices.find({"source": "odoo"}).to_list(1000)}
@@ -287,27 +287,27 @@ async def toggle_auto(invoice_id: str, body: dict, current=Depends(get_current_u
     enabled = bool(body.get("auto_enabled", True))
     res = await db.invoices.update_one({"id": invoice_id}, {"$set": {"auto_enabled": enabled}})
     if res.matched_count == 0:
-        raise HTTPException(status_code=404, detail="Factuur niet gevonden")
+        raise HTTPException(status_code=404, detail="Invoice not found")
     return {"id": invoice_id, "auto_enabled": enabled}
 
 
 # ---------------- Reminders ----------------
 def build_message(invoice: dict, company: str) -> tuple:
-    subject = f"Herinnering: openstaande factuur {invoice['name']}"
+    subject = f"Reminder: outstanding invoice {invoice['name']}"
     amount = f"{invoice.get('currency', 'EUR')} {invoice.get('amount_residual', 0):,.2f}"
     html = f"""
     <div style="font-family:Arial,sans-serif;color:#0F172A">
-      <p>Beste {invoice.get('partner_name', 'klant')},</p>
-      <p>Onze administratie geeft aan dat factuur <strong>{invoice['name']}</strong>
-      met een openstaand bedrag van <strong>{amount}</strong> reeds
-      <strong>{invoice.get('days_overdue', 0)} dagen</strong> vervallen is
-      (vervaldatum {invoice.get('invoice_date_due', '')}).</p>
-      <p>Wij verzoeken u vriendelijk dit bedrag zo spoedig mogelijk te voldoen.</p>
-      <p>Met vriendelijke groet,<br/>{company}</p>
+      <p>Dear {invoice.get('partner_name', 'customer')},</p>
+      <p>Our records show that invoice <strong>{invoice['name']}</strong>
+      with an outstanding balance of <strong>{amount}</strong> is now
+      <strong>{invoice.get('days_overdue', 0)} days</strong> overdue
+      (due date {invoice.get('invoice_date_due', '')}).</p>
+      <p>We kindly request that you settle this amount as soon as possible.</p>
+      <p>Kind regards,<br/>{company}</p>
     </div>"""
-    text = (f"Beste {invoice.get('partner_name', 'klant')}, factuur {invoice['name']} "
-            f"({amount}) is {invoice.get('days_overdue', 0)} dagen vervallen. "
-            f"Gelieve zo snel mogelijk te betalen. Groet, {company}")
+    text = (f"Dear {invoice.get('partner_name', 'customer')}, invoice {invoice['name']} "
+            f"({amount}) is {invoice.get('days_overdue', 0)} days overdue. "
+            f"Please settle it as soon as possible. Regards, {company}")
     return subject, html, text
 
 
@@ -331,7 +331,7 @@ async def _log_reminder(invoice: dict, channel: str, status: str, detail: str, d
 
 
 async def dispatch_reminder(invoice: dict, channel: str, settings: dict, trigger: str, step_id: str = None) -> dict:
-    company = settings.get("company_name", "Mijn Bedrijf")
+    company = settings.get("company_name", "My Company")
     subject, html, text = build_message(invoice, company)
     status = "sent"
     detail = ""
@@ -341,7 +341,7 @@ async def dispatch_reminder(invoice: dict, channel: str, settings: dict, trigger
         elif channel == "whatsapp":
             await notif.send_whatsapp(settings.get("twilio", {}), invoice.get("phone"), text)
         else:
-            raise ValueError("Onbekend kanaal")
+            raise ValueError("Unknown channel")
     except Exception as e:
         status = "failed"
         detail = str(e)
@@ -356,8 +356,8 @@ async def dispatch_reminder(invoice: dict, channel: str, settings: dict, trigger
                 webhook,
                 title=f"{icon} Herinnering {invoice.get('name')}",
                 description=(f"**{invoice.get('partner_name')}** · {channel.upper()} · {trigger}\n"
-                             f"Bedrag: {invoice.get('currency','EUR')} {invoice.get('amount_residual',0):,.2f} · "
-                             f"{invoice.get('days_overdue',0)} dagen vervallen"),
+                             f"Amount: {invoice.get('currency','EUR')} {invoice.get('amount_residual',0):,.2f} · "
+                             f"{invoice.get('days_overdue',0)} days overdue"),
                 color=3066993 if status == "sent" else 15158332,
             )
             discord_status = "sent"
@@ -371,11 +371,11 @@ async def dispatch_reminder(invoice: dict, channel: str, settings: dict, trigger
 async def remind(invoice_id: str, data: RemindInput, current=Depends(get_current_user)):
     invoice = await db.invoices.find_one({"id": invoice_id})
     if not invoice:
-        raise HTTPException(status_code=404, detail="Factuur niet gevonden")
+        raise HTTPException(status_code=404, detail="Invoice not found")
     settings = await get_settings()
-    entry = await dispatch_reminder(_serialize_invoice(invoice), data.channel, settings, trigger="handmatig")
+    entry = await dispatch_reminder(_serialize_invoice(invoice), data.channel, settings, trigger="manual")
     if entry["status"] == "failed":
-        raise HTTPException(status_code=400, detail=entry["detail"] or "Verzenden mislukt")
+        raise HTTPException(status_code=400, detail=entry["detail"] or "Sending failed")
     return entry
 
 
@@ -384,9 +384,9 @@ async def discord_test(current=Depends(get_current_user)):
     settings = await get_settings()
     webhook = settings.get("discord", {}).get("webhook_url")
     if not webhook:
-        raise HTTPException(status_code=400, detail="Discord webhook niet geconfigureerd")
+        raise HTTPException(status_code=400, detail="Discord webhook not configured")
     try:
-        await notif.send_discord(webhook, title="🔔 Testmelding", description="Verbinding met kanaal #odoo werkt correct.")
+        await notif.send_discord(webhook, title="🔔 Test message", description="Connection to channel #odoo works correctly.")
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
     return {"ok": True}
@@ -397,7 +397,7 @@ async def odoo_test(current=Depends(get_current_user)):
     s = await get_settings()
     o = s.get("odoo", {})
     if not (o.get("url") and o.get("db") and o.get("username") and o.get("api_key")):
-        raise HTTPException(status_code=400, detail="Vul alle Odoo-velden in")
+        raise HTTPException(status_code=400, detail="Please fill in all Odoo fields")
     try:
         info = await odoo_client.test_connection(o["url"], o["db"], o["username"], o["api_key"])
     except Exception as e:
@@ -513,12 +513,12 @@ async def startup():
         await db.users.insert_one({
             "email": admin_email,
             "password_hash": auth_lib.hash_password(admin_password),
-            "name": "Beheerder",
+            "name": "Admin",
             "role": "admin",
             "mfa_enabled": False,
             "created_at": now_iso(),
         })
-        logger.info("Admin gebruiker aangemaakt: %s", admin_email)
+        logger.info("Admin user created: %s", admin_email)
     elif not auth_lib.verify_password(admin_password, existing.get("password_hash", "")):
         await db.users.update_one({"email": admin_email},
                                   {"$set": {"password_hash": auth_lib.hash_password(admin_password)}})

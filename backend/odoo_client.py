@@ -8,7 +8,7 @@ def _connect_and_fetch(url: str, db: str, username: str, api_key: str):
     common = xmlrpc.client.ServerProxy(f"{url}/xmlrpc/2/common", allow_none=True)
     uid = common.authenticate(db, username, api_key, {})
     if not uid:
-        raise ValueError("Odoo authenticatie mislukt. Controleer database, gebruiker en API-sleutel.")
+        raise ValueError("Odoo authentication failed. Check the database, user and API key.")
 
     models = xmlrpc.client.ServerProxy(f"{url}/xmlrpc/2/object", allow_none=True)
     today = date.today().isoformat()
@@ -52,7 +52,7 @@ def _connect_and_fetch(url: str, db: str, username: str, api_key: str):
         result.append({
             "odoo_id": r["id"],
             "name": r.get("name") or f"INV/{r['id']}",
-            "partner_name": r["partner_id"][1] if r.get("partner_id") else "Onbekend",
+            "partner_name": r["partner_id"][1] if r.get("partner_id") else "Unknown",
             "email": partner.get("email") or "",
             "phone": partner.get("mobile") or partner.get("phone") or "",
             "amount_total": r.get("amount_total") or 0.0,
@@ -75,7 +75,7 @@ def _test_connection(url: str, db: str, username: str, api_key: str):
     version = common.version()
     uid = common.authenticate(db, username, api_key, {})
     if not uid:
-        raise ValueError("Authenticatie mislukt")
+        raise ValueError("Authentication failed")
     return {"uid": uid, "server_version": version.get("server_version", "onbekend")}
 
 

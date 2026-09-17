@@ -4,7 +4,7 @@ import msal
 
 async def send_discord(webhook_url: str, title: str, description: str, color: int = 5793266, fields: list | None = None):
     if not webhook_url:
-        raise ValueError("Discord webhook niet geconfigureerd")
+        raise ValueError("Discord webhook not configured")
     embed = {"title": title, "description": description, "color": color}
     if fields:
         embed["fields"] = fields
@@ -12,7 +12,7 @@ async def send_discord(webhook_url: str, title: str, description: str, color: in
     async with httpx.AsyncClient(timeout=15) as client:
         resp = await client.post(webhook_url, json=payload)
         if resp.status_code not in (200, 204):
-            raise ValueError(f"Discord fout: {resp.status_code} {resp.text[:200]}")
+            raise ValueError(f"Discord error: {resp.status_code} {resp.text[:200]}")
     return True
 
 
@@ -23,7 +23,7 @@ def _get_graph_token(tenant_id: str, client_id: str, client_secret: str) -> str:
     )
     result = appc.acquire_token_for_client(scopes=["https://graph.microsoft.com/.default"])
     if "access_token" not in result:
-        raise ValueError(f"Office 365 token fout: {result.get('error_description', result.get('error'))}")
+        raise ValueError(f"Office 365 token error: {result.get('error_description', result.get('error'))}")
     return result["access_token"]
 
 
@@ -33,9 +33,9 @@ async def send_office365_email(cfg: dict, to_email: str, subject: str, html_body
     client_secret = cfg.get("client_secret")
     mail_from = cfg.get("mail_from")
     if not all([tenant_id, client_id, client_secret, mail_from]):
-        raise ValueError("Office 365 is niet volledig geconfigureerd")
+        raise ValueError("Office 365 is not fully configured")
     if not to_email:
-        raise ValueError("Geen e-mailadres bekend voor deze klant")
+        raise ValueError("No email address on file for this customer")
 
     import asyncio
     token = await asyncio.to_thread(_get_graph_token, tenant_id, client_id, client_secret)
@@ -52,7 +52,7 @@ async def send_office365_email(cfg: dict, to_email: str, subject: str, html_body
     async with httpx.AsyncClient(timeout=20) as client:
         resp = await client.post(url, headers=headers, json=message)
         if resp.status_code != 202:
-            raise ValueError(f"Office 365 fout: {resp.status_code} {resp.text[:200]}")
+            raise ValueError(f"Office 365 error: {resp.status_code} {resp.text[:200]}")
     return True
 
 
@@ -61,9 +61,9 @@ async def send_whatsapp(cfg: dict, to_phone: str, body: str):
     auth_token = cfg.get("auth_token")
     from_number = cfg.get("whatsapp_from")
     if not all([account_sid, auth_token, from_number]):
-        raise ValueError("Twilio WhatsApp is niet volledig geconfigureerd")
+        raise ValueError("Twilio WhatsApp is not fully configured")
     if not to_phone:
-        raise ValueError("Geen telefoonnummer bekend voor deze klant")
+        raise ValueError("No phone number on file for this customer")
 
     to_wa = to_phone if to_phone.startswith("whatsapp:") else f"whatsapp:{to_phone.strip()}"
     from_wa = from_number if from_number.startswith("whatsapp:") else f"whatsapp:{from_number.strip()}"
@@ -72,5 +72,5 @@ async def send_whatsapp(cfg: dict, to_phone: str, body: str):
     async with httpx.AsyncClient(timeout=20) as client:
         resp = await client.post(url, data=data, auth=(account_sid, auth_token))
         if resp.status_code not in (200, 201):
-            raise ValueError(f"WhatsApp fout: {resp.status_code} {resp.text[:200]}")
+            raise ValueError(f"WhatsApp error: {resp.status_code} {resp.text[:200]}")
     return True
