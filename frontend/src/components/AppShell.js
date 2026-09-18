@@ -1,8 +1,9 @@
 import React from "react";
 import { NavLink, useNavigate } from "react-router-dom";
-import { LayoutDashboard, Settings, History, LogOut, Sun, Moon, ShieldCheck } from "lucide-react";
+import { LayoutDashboard, Settings, History, LogOut, Sun, Moon, Users } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 const LOGO = "https://customer-assets-cm19k8pv.emergentagent.net/job_odoo-invoice-hub/artifacts/g9o6vp41_image.png";
 const SUBLOGO = "https://customer-assets-cm19k8pv.emergentagent.net/job_odoo-invoice-hub/artifacts/srxqyr8y_image.png";
@@ -10,6 +11,7 @@ const SUBLOGO = "https://customer-assets-cm19k8pv.emergentagent.net/job_odoo-inv
 const nav = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard, testid: "nav-dashboard" },
   { to: "/activity", label: "Activity", icon: History, testid: "nav-activity" },
+  { to: "/users", label: "Users", icon: Users, testid: "nav-users", adminOnly: true },
   { to: "/settings", label: "Settings", icon: Settings, testid: "nav-settings" },
 ];
 
@@ -38,7 +40,7 @@ export default function AppShell({ children }) {
             <img src={SUBLOGO} alt="odoo" className="absolute -top-1.5 right-[2%] h-2.5 w-auto invert dark:invert-0" />
           </div>
         </div>
-        {nav.map((n) => (
+        {nav.filter((n) => !n.adminOnly || user?.role === "admin").map((n) => (
           <NavLink key={n.to} to={n.to} end={n.to === "/"} data-testid={n.testid}
             className={({ isActive }) =>
               `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
@@ -52,9 +54,15 @@ export default function AppShell({ children }) {
             {dark ? <Sun className="h-4 w-4 mr-2" /> : <Moon className="h-4 w-4 mr-2" />}
             {dark ? "Light mode" : "Dark mode"}
           </Button>
-          <div className="px-3 py-2 rounded-lg bg-accent/50">
-            <p className="text-xs font-medium truncate" data-testid="current-user-email">{user?.email}</p>
-            <p className="text-[10px] text-muted-foreground uppercase">{user?.role}</p>
+          <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-accent/50">
+            <Avatar className="h-8 w-8">
+              {user?.avatar ? <AvatarImage src={user.avatar} alt={user?.name} /> : null}
+              <AvatarFallback className="text-xs bg-primary/20 text-primary">{(user?.name || user?.email || "?").slice(0, 2).toUpperCase()}</AvatarFallback>
+            </Avatar>
+            <div className="min-w-0">
+              <p className="text-xs font-medium truncate" data-testid="current-user-email">{user?.email}</p>
+              <p className="text-[10px] text-muted-foreground uppercase">{user?.role}</p>
+            </div>
           </div>
           <Button variant="outline" size="sm" onClick={handleLogout} className="w-full justify-start" data-testid="logout-button">
             <LogOut className="h-4 w-4 mr-2" /> Sign out

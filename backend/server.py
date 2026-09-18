@@ -191,13 +191,160 @@ async def mfa_verify(data: MfaVerifyInput, request: Request):
     token = auth_lib.create_access_token(user_id, user["email"])
     return {
         "access_token": token,
-        "user": {"id": user_id, "email": user["email"], "name": user.get("name", ""), "role": user.get("role", "user")},
+        "user": {"id": user_id, "email": user["email"], "name": user.get("name", ""), "role": user.get("role", "user"), "avatar": user.get("avatar", "")},
     }
 
 
 @api_router.get("/auth/me")
 async def me(current=Depends(get_current_user)):
     return current
+
+
+# ---------------- User management ----------------
+class CreateUserInput(BaseModel):
+    email: EmailStr
+    name: str = ""
+    password: str
+    role: str = "user"
+
+
+class UpdateUserInput(BaseModel):
+    name: Optional[str] = None
+    role: Optional[str] = None
+    password: Optional[str] = None
+    avatar: Optional[str] = None
+
+
+class ProfileInput(BaseModel):
+    name: Optional[str] = None
+    avatar: Optional[str] = None
+
+
+class ChangePasswordInput(BaseModel):
+    current_password: str
+    new_password: str
+
+
+def _serialize_user(doc: dict) -> dict:
+    return {
+        "id": str(doc["_id"]) if doc.get("_id") else doc.get("id"),
+        "email": doc.get("email"),
+        "name": doc.get("name", ""),
+        "role": doc.get("role", "user"),
+        "avatar": doc.get("avatar", ""),
+        "mfa_enabled": doc.get("mfa_enabled", False),
+        "created_at": doc.get("created_at"),
+    }
+
+
+async def require_admin(current=Depends(get_current_user)):
+    if current.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    return current
+
+
+def _validate_avatar(avatar: Optional[str]):
+    if avatar and len(avatar) > 3_000_000:
+        raise HTTPException(status_code=400, detail="Avatar image is too large (max ~2MB)")
+
+
+@api_router.get("/users")
+async def list_users(current=Depends(require_admin)):
+    users = await db.users.find({}).sort("created_at", 1).to_list(500)
+    return {"users": [_serialize_user(u) for u in users]}
+
+
+@api_router.post("/users")
+async def create_user(data: CreateUserInput, current=Depends(require_admin)):
+    email = data.email.lower()
+    if await db.users.find_one({"email": email}):
+        raise HTTPException(status_code=400, detail="A user with this email already exists")
+    if len(data.password) < 8:
+        raise HTTPException(status_code=400, detail="Password must be at least 8 characters")
+    doc = {
+        "email": email,
+        "name": data.name or email.split("@")[0],
+        "password_hash": auth_lib.hash_password(data.password),
+        "role": data.role if data.role in ("admin", "user") else "user",
+        "avatar": "",
+        "mfa_enabled": False,
+        "created_at": now_iso(),
+    }
+    res = await db.users.insert_one(doc)
+    doc["_id"] = res.inserted_id
+    return _serialize_user(doc)
+
+
+@api_router.patch("/users/{user_id}")
+async def update_user(user_id: str, data: UpdateUserInput, current=Depends(require_admin)):
+    from bson import ObjectId
+    try:
+        oid = ObjectId(user_id)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid user id")
+    user = await db.users.find_one({"_id": oid})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    _validate_avatar(data.avatar)
+    updates = {}
+    if data.name is not None:
+        updates["name"] = data.name
+    if data.role is not None:
+        if data.role not in ("admin", "user"):
+            raise HTTPException(status_code=400, detail="Invalid role")
+        updates["role"] = data.role
+    if data.avatar is not None:
+        updates["avatar"] = data.avatar
+    if data.password:
+        if len(data.password) < 8:
+            raise HTTPException(status_code=400, detail="Password must be at least 8 characters")
+        updates["password_hash"] = auth_lib.hash_password(data.password)
+    if updates:
+        await db.users.update_one({"_id": oid}, {"$set": updates})
+    user = await db.users.find_one({"_id": oid})
+    return _serialize_user(user)
+
+
+@api_router.delete("/users/{user_id}")
+async def delete_user(user_id: str, current=Depends(require_admin)):
+    from bson import ObjectId
+    try:
+        oid = ObjectId(user_id)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid user id")
+    if str(oid) == current["id"]:
+        raise HTTPException(status_code=400, detail="You cannot delete your own account")
+    res = await db.users.delete_one({"_id": oid})
+    if res.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="User not found")
+    return {"deleted": user_id}
+
+
+@api_router.patch("/auth/profile")
+async def update_profile(data: ProfileInput, current=Depends(get_current_user)):
+    from bson import ObjectId
+    _validate_avatar(data.avatar)
+    updates = {}
+    if data.name is not None:
+        updates["name"] = data.name
+    if data.avatar is not None:
+        updates["avatar"] = data.avatar
+    if updates:
+        await db.users.update_one({"_id": ObjectId(current["id"])}, {"$set": updates})
+    user = await db.users.find_one({"_id": ObjectId(current["id"])})
+    return _serialize_user(user)
+
+
+@api_router.post("/auth/change-password")
+async def change_password(data: ChangePasswordInput, current=Depends(get_current_user)):
+    from bson import ObjectId
+    user = await db.users.find_one({"_id": ObjectId(current["id"])})
+    if not auth_lib.verify_password(data.current_password, user.get("password_hash", "")):
+        raise HTTPException(status_code=400, detail="Current password is incorrect")
+    if len(data.new_password) < 8:
+        raise HTTPException(status_code=400, detail="New password must be at least 8 characters")
+    await db.users.update_one({"_id": ObjectId(current["id"])}, {"$set": {"password_hash": auth_lib.hash_password(data.new_password)}})
+    return {"ok": True}
 
 
 # ---------------- Invoices ----------------

@@ -8,6 +8,7 @@ import Login from "@/pages/Login";
 import Dashboard from "@/pages/Dashboard";
 import Settings from "@/pages/Settings";
 import Activity from "@/pages/Activity";
+import Users from "@/pages/Users";
 
 function Protected({ children }) {
   const { user } = useAuth();
@@ -27,6 +28,7 @@ function App() {
             <Route path="/" element={<Protected><Dashboard /></Protected>} />
             <Route path="/settings" element={<Protected><Settings /></Protected>} />
             <Route path="/activity" element={<Protected><Activity /></Protected>} />
+            <Route path="/users" element={<Protected><Users /></Protected>} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </BrowserRouter>
