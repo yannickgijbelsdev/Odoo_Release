@@ -6,6 +6,7 @@ import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
 
 const LOGO = "https://customer-assets-cm19k8pv.emergentagent.net/job_odoo-invoice-hub/artifacts/g9o6vp41_image.png";
+const SUBLOGO = "https://customer-assets-cm19k8pv.emergentagent.net/job_odoo-invoice-hub/artifacts/srxqyr8y_image.png";
 
 const FEATURES = [
   { icon: Activity, title: "Overdue tracking", desc: "Live Odoo invoice sync.", color: "text-rose-400", ring: "bg-rose-500/10", pos: "top-[7%] left-[16%]" },
@@ -75,9 +76,9 @@ export default function Login() {
     <div className="min-h-screen flex bg-[#08090C] text-white">
       {/* Left: form */}
       <div className="w-full lg:w-1/2 flex flex-col justify-center px-8 sm:px-16 lg:px-20 py-12 relative">
-        <div className="flex items-start gap-1 mb-16">
-          <img src={LOGO} alt="koodh" className="h-8 w-auto" data-testid="login-logo" />
-          <span className="mt-0.5 font-mono text-[10px] tracking-widest text-white/40">vdc</span>
+        <div className="flex items-end gap-2.5 mb-16">
+          <img src={LOGO} alt="koodh" className="h-8 w-auto brightness-0 invert" data-testid="login-logo" />
+          <img src={SUBLOGO} alt="" className="h-4 w-auto mb-0.5 opacity-90" />
         </div>
 
         <div className="max-w-sm w-full">

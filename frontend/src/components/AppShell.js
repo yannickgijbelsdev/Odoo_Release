@@ -5,6 +5,7 @@ import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 
 const LOGO = "https://customer-assets-cm19k8pv.emergentagent.net/job_odoo-invoice-hub/artifacts/g9o6vp41_image.png";
+const SUBLOGO = "https://customer-assets-cm19k8pv.emergentagent.net/job_odoo-invoice-hub/artifacts/srxqyr8y_image.png";
 
 const nav = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard, testid: "nav-dashboard" },
@@ -31,9 +32,9 @@ export default function AppShell({ children }) {
   return (
     <div className="min-h-screen flex bg-background">
       <aside className="hidden md:flex w-64 flex-col border-r border-border bg-card/40 p-4 gap-2">
-        <div className="flex items-center gap-1.5 px-2 py-4 mb-2">
-          <img src={LOGO} alt="koodh" className="h-6 w-auto" />
-          <span className="font-mono text-[9px] tracking-widest text-muted-foreground mt-0.5">vdc</span>
+        <div className="flex items-end gap-2 px-2 py-4 mb-2">
+          <img src={LOGO} alt="koodh" className="h-6 w-auto dark:brightness-0 dark:invert" />
+          <img src={SUBLOGO} alt="" className="h-3.5 w-auto mb-0.5 invert dark:invert-0" />
         </div>
         {nav.map((n) => (
           <NavLink key={n.to} to={n.to} end={n.to === "/"} data-testid={n.testid}
@@ -60,7 +61,7 @@ export default function AppShell({ children }) {
       </aside>
       <main className="flex-1 min-w-0 overflow-auto">
         <div className="md:hidden flex items-center justify-between p-4 border-b border-border">
-          <img src={LOGO} alt="koodh" className="h-5 w-auto" />
+          <img src={LOGO} alt="koodh" className="h-5 w-auto dark:brightness-0 dark:invert" />
           <div className="flex gap-2">
             <Button variant="ghost" size="icon" onClick={toggleTheme}>{dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}</Button>
             <Button variant="ghost" size="icon" onClick={handleLogout}><LogOut className="h-4 w-4" /></Button>
