@@ -32,9 +32,11 @@ export default function AppShell({ children }) {
   return (
     <div className="min-h-screen flex bg-background">
       <aside className="hidden md:flex w-64 flex-col border-r border-border bg-card/40 p-4 gap-2">
-        <div className="flex items-end gap-2 px-2 py-4 mb-2">
-          <img src={LOGO} alt="koodh" className="h-6 w-auto dark:brightness-0 dark:invert" />
-          <img src={SUBLOGO} alt="" className="h-3.5 w-auto mb-0.5 invert dark:invert-0" />
+        <div className="px-2 py-4 mb-2">
+          <div className="relative inline-block">
+            <img src={LOGO} alt="koodh" className="h-6 w-auto dark:brightness-0 dark:invert" />
+            <img src={SUBLOGO} alt="odoo" className="absolute -top-1.5 right-[17%] h-2.5 w-auto invert dark:invert-0" />
+          </div>
         </div>
         {nav.map((n) => (
           <NavLink key={n.to} to={n.to} end={n.to === "/"} data-testid={n.testid}

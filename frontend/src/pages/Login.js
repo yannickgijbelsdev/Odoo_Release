@@ -76,9 +76,9 @@ export default function Login() {
     <div className="min-h-screen flex bg-[#08090C] text-white">
       {/* Left: form */}
       <div className="w-full lg:w-1/2 flex flex-col justify-center px-8 sm:px-16 lg:px-20 py-12 relative">
-        <div className="flex items-end gap-2.5 mb-16">
+        <div className="relative inline-block self-start mb-16">
           <img src={LOGO} alt="koodh" className="h-8 w-auto brightness-0 invert" data-testid="login-logo" />
-          <img src={SUBLOGO} alt="" className="h-4 w-auto mb-0.5 opacity-90" />
+          <img src={SUBLOGO} alt="odoo" className="absolute -top-2 right-[17%] h-3 w-auto opacity-90" />
         </div>
 
         <div className="max-w-sm w-full">
