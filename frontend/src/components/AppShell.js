@@ -35,7 +35,7 @@ export default function AppShell({ children }) {
         <div className="px-2 py-4 mb-2">
           <div className="relative inline-block">
             <img src={LOGO} alt="koodh" className="h-6 w-auto dark:brightness-0 dark:invert" />
-            <img src={SUBLOGO} alt="odoo" className="absolute -top-1.5 right-[8%] h-2.5 w-auto invert dark:invert-0" />
+            <img src={SUBLOGO} alt="odoo" className="absolute -top-1.5 right-[2%] h-2.5 w-auto invert dark:invert-0" />
           </div>
         </div>
         {nav.map((n) => (
