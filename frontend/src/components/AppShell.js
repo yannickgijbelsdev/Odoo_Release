@@ -18,7 +18,7 @@ const nav = [
 export default function AppShell({ children }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const [dark, setDark] = React.useState(!document.documentElement.classList.contains("dark") ? false : true);
+  const [dark, setDark] = React.useState(document.documentElement.classList.contains("dark"));
 
   const toggleTheme = () => {
     const isDark = document.documentElement.classList.toggle("dark");

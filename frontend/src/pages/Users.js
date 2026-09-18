@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -179,7 +179,7 @@ export default function Users() {
       {/* Create dialog */}
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent data-testid="create-user-dialog">
-          <DialogHeader><DialogTitle>New user</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>New user</DialogTitle><DialogDescription>Create an account with a role and initial password.</DialogDescription></DialogHeader>
           <form onSubmit={submitCreate} className="space-y-4">
             <div className="space-y-1.5">
               <Label>Email</Label>
@@ -215,7 +215,7 @@ export default function Users() {
       {/* Edit dialog */}
       <Dialog open={!!editUser} onOpenChange={(o) => !o && setEditUser(null)}>
         <DialogContent data-testid="edit-user-dialog">
-          <DialogHeader><DialogTitle>Edit {editUser?.email}</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>Edit {editUser?.email}</DialogTitle><DialogDescription>Update the avatar, name, role or password.</DialogDescription></DialogHeader>
           <form onSubmit={submitEdit} className="space-y-4">
             <div className="flex items-center gap-4">
               <Avatar className="h-16 w-16">
